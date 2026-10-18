@@ -6,6 +6,59 @@ Hybrid retrieval-augmented generation over a movie catalogue, combining a **grap
 - The **graph** understands *structure*: "sci-fi films starring Rina Sato", "directed by Kapoor *and* starring Obi", "more like Glass Harbor".
 - A **hybrid retriever** runs both, fuses the rankings, and hands an LLM context that includes plots, structured facts, and the graph paths that explain *why* each movie was retrieved.
 
+## Architecture
+
+```mermaid
+flowchart TB
+    user(["User"])
+    data[("data/movies.json")]
+
+    subgraph app["cinegraph (Python package)"]
+        cli["cli.py<br/>ingest | ask"]
+        pipeline["pipeline.py<br/>Settings · build_stores · ingest · build_retriever"]
+        embed["embeddings.py<br/>SentenceTransformer / Hashing fallback"]
+        linker["linker.py<br/>EntityLinker (string match + genre synonyms)"]
+        retriever["retriever.py<br/>HybridRetriever + RetrieverConfig"]
+        generator["generator.py<br/>build_context · answer"]
+        models["models.py<br/>Movie · Entity · GraphPath · VectorHit · RetrievedMovie"]
+
+        subgraph gs["graph_store.py — GraphStore protocol"]
+            nx["NetworkXGraphStore<br/>(backend=memory)"]
+            neo["Neo4jGraphStore<br/>(backend=server)"]
+        end
+        subgraph vs["vector_store.py — VectorStore protocol"]
+            mem["InMemoryVectorStore<br/>numpy (backend=memory)"]
+            qd["QdrantVectorStore<br/>(backend=server)"]
+        end
+    end
+
+    subgraph ext["External services (docker-compose / API)"]
+        neo4j[("Neo4j 5<br/>bolt :7687 · UI :7474")]
+        qdrant[("Qdrant<br/>:6333 · collection cinegraph_movies")]
+        claude["Anthropic API<br/>Claude (optional, needs ANTHROPIC_API_KEY)"]
+    end
+
+    user --> cli
+    cli --> pipeline
+    cli --> retriever
+    cli --> generator
+    data --> pipeline
+    pipeline --> embed
+    pipeline --> gs
+    pipeline --> vs
+    pipeline -->|constructs| retriever
+    retriever --> embed
+    retriever --> linker
+    retriever --> gs
+    retriever --> vs
+    linker -. "entities() from graph" .-> gs
+    neo --> neo4j
+    qd --> qdrant
+    generator --> claude
+```
+
+`CINEGRAPH_BACKEND=memory` uses NetworkX + numpy with no services; `server` uses Neo4j + Qdrant from `docker-compose.yml`. Ingestion, the graph schema and the step-by-step query sequence are in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+
 ## How the two stores are joined
 
 Every movie is written to both stores under the same `uid` (e.g. `m08`). Graph nodes carry it as a property; Qdrant points carry it in their payload. That shared key is the whole trick: a vector hit can become a graph seed, and a graph neighbour can be scored and enriched without any lookup table.
