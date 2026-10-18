@@ -31,6 +31,8 @@ Every movie is written to both stores under the same `uid` (e.g. `m08`). Graph n
      enrich winners with graph facts → LLM context → answer
 ```
 
+For the full picture (components, backends, ingestion, graph schema, and the query sequence), see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+
 ### Scoring
 
 - **Named entities** (people, genres, titles found in the question): each path to a movie adds `hop_decay^(hops-1)`. A movie connected to *two* named entities scores ~2, one connected to one scores ~1, so intersections win.
@@ -88,6 +90,7 @@ Entities recognised in the question: Glass Harbor (Movie)
 | `cinegraph/generator.py` | builds the LLM context and calls Claude |
 | `cinegraph/pipeline.py` | config, ingestion into both stores, wiring |
 | `data/movies.json` | 16 fictional movies to play with |
+| `docs/ARCHITECTURE.md` | architecture diagrams (Mermaid) |
 
 ## Using your own data
 
