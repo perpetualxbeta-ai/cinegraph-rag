@@ -35,7 +35,7 @@ Every movie is written to both stores under the same `uid` (e.g. `m08`). Graph n
 
 - **Named entities** (people, genres, titles found in the question): each path to a movie adds `hop_decay^(hops-1)`. A movie connected to *two* named entities scores ~2, one connected to one scores ~1, so intersections win.
 - **Semantic seeds** (top-3 vector hits): expand "more like this" through the graph, weighted by similarity and by edge type (shared director 1.0 > actor 0.8 > genre 0.3, since genres are hubs).
-- **Fusion** (`--fusion auto`, the default): when the query names entities, a min-max-normalised weighted blend keeps the graph's score gaps meaningful; for pure-meaning queries, Reciprocal Rank Fusion. Both are available explicitly via `--fusion rrf|weighted`. All knobs live in `RetrieverConfig`.
+- **Fusion** (`--fusion auto`, the default): when the query names entities, a scale-preserving weighted blend (raw cosine + graph score divided by its max) keeps the graph's score gaps meaningful; for pure-meaning queries, Reciprocal Rank Fusion. Both are available explicitly via `--fusion rrf|weighted`. All knobs live in `RetrieverConfig`.
 
 ## Quick start (no services)
 
@@ -69,7 +69,7 @@ Set `ANTHROPIC_API_KEY` to get a generated answer after the retrieved context.
 $ python -m cinegraph ask "something like Glass Harbor" -k 3 --context-only
 Entities recognised in the question: Glass Harbor (Movie)
 
-[2] The Lantern Keeper (2014)
+[1] The Lantern Keeper (2014)
     Graph link: Glass Harbor -[IN_GENRE]- Mystery -[IN_GENRE]- The Lantern Keeper
     Graph link: Glass Harbor -[ACTED_IN]- Rina Sato -[ACTED_IN]- The Lantern Keeper
     Graph link: Glass Harbor -[DIRECTED_BY]- Ines Moreau -[DIRECTED_BY]- The Lantern Keeper

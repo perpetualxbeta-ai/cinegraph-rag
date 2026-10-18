@@ -45,6 +45,11 @@ def test_director_and_actor_constraint(retriever):
     assert set(titles(r, 2)) == {"Orbit of Ash", "Quiet Frequency"}
 
 
+def test_genre_plus_actor_beats_noisy_semantic_hits(retriever):
+    r = retriever.retrieve("thriller with Joon Park", k=5)
+    assert titles(r, 1) == ["Glass Harbor"]  # the only Thriller starring Joon Park
+
+
 def test_more_like_a_named_movie_uses_graph_neighbours(retriever):
     r = retriever.retrieve("something like Glass Harbor", k=5)
     # Lantern Keeper shares director, actor and genre with Glass Harbor

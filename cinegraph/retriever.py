@@ -134,12 +134,11 @@ class HybridRetriever:
                     s += gw / (cfg.rrf_k + g_rank[u])
                 out[u] = s
         elif mode == "weighted":
-            def norm(d):
-                if not d:
-                    return {}
-                lo, hi = min(d.values()), max(d.values())
-                return {k: (v - lo) / (hi - lo) if hi > lo else 1.0 for k, v in d.items()}
-            vn, gn = norm(vec_score), norm(g_score)
+            # Scale-preserving on purpose. Min-max would turn tiny cosine gaps into a
+            # full 0..1 swing and shrink the graph's 2-entities-vs-1 gap by half.
+            vn = {u: max(0.0, min(1.0, s)) for u, s in vec_score.items()}  # cosine already bounded
+            gmax = max(g_score.values(), default=0.0)
+            gn = {u: s / gmax for u, s in g_score.items()} if gmax > 0 else {}
             for u in candidates:
                 out[u] = cfg.vector_weight * vn.get(u, 0.0) + gw * gn.get(u, 0.0)
         else:
